@@ -1,0 +1,116 @@
+name: FlowForge Integration Tests
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'shared-infrastructure/**'
+      - 'workflow-engine/**'
+      - '.github/workflows/integration.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+
+jobs:
+  test-infrastructure:
+    name: Test Shared Infrastructure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Start shared infrastructure
+        run: |
+          cd shared-infrastructure
+          if [ -f docker-compose.yml ]; then
+            docker-compose up -d
+            echo "✅ Docker Compose started"
+          else
+            echo "⏳ docker-compose.yml not yet created (Phase 0.S pending)"
+            exit 0
+          fi
+      
+      - name: Wait for services
+        run: |
+          cd shared-infrastructure
+          if [ -f scripts/health-check.sh ]; then
+            timeout 120 bash -c 'until ./scripts/health-check.sh; do sleep 5; echo "Waiting for services..."; done'
+            echo "✅ All services healthy"
+          else
+            echo "⏳ Health check not yet implemented"
+          fi
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          cd shared-infrastructure
+          if [ -f docker-compose.yml ]; then
+            docker-compose down -v
+          fi
+
+  test-workflow-engine:
+    name: Test Workflow Engine
+    runs-on: ubuntu-latest
+    needs: test-infrastructure
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install workflow-engine
+        run: |
+          cd workflow-engine
+          if [ -f requirements.txt ]; then
+            pip install -e .
+            echo "✅ Workflow engine installed"
+          else
+            echo "⏳ workflow-engine not yet migrated"
+            exit 0
+          fi
+      
+      - name: Test workflow-engine CLI
+        run: |
+          cd workflow-engine
+          if command -v n8n-workflow &> /dev/null; then
+            n8n-workflow --help
+            echo "✅ CLI working"
+          else
+            echo "⏳ CLI not yet implemented"
+          fi
+
+  integration-status:
+    name: Integration Status Report
+    runs-on: ubuntu-latest
+    needs: [test-infrastructure, test-workflow-engine]
+    if: always()
+    
+    steps:
+      - name: Status Summary
+        run: |
+          echo "## 🔗 FlowForge Integration Status"
+          echo ""
+          echo "### Components:"
+          echo "- ✅ FlowForge Umbrella: Repository created"
+          echo "- ✅ Submodules: workflow-engine, shared-infrastructure configured"
+          echo "- ⏳ PlayRAGNA: Private submodule (requires auth)"
+          echo "- ⏳ Phase 0.S: Shared infrastructure implementation pending"
+          echo ""
+          echo "### Next Steps:"
+          echo "1. Complete Phase 0.S (shared-infrastructure Docker Compose)"
+          echo "2. Migrate workflow-engine code"
+          echo "3. Configure PlayRAGNA submodule with access token"
