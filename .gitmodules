@@ -1,14 +1,14 @@
 [submodule "PlayRAGNA"]
-    path = PlayRAGNA
-    url = https://github.com/Win-KemaAlexArt/PlayRAGNA.git
-    branch = brainstorm-playragna
+	path = PlayRAGNA
+	url = https://github.com/Win-KemaAlexArt/PlayRAGNA.git
+	branch = brainstorm-playragna
 
 [submodule "workflow-engine"]
-    path = workflow-engine
-    url = https://github.com/Win-KemaAlexArt/workflow-engine.git
-    branch = main
+	path = workflow-engine
+	url = https://github.com/Win-KemaAlexArt/workflow-engine.git
+	branch = main
 
 [submodule "shared-infrastructure"]
-    path = shared-infrastructure
-    url = https://github.com/Win-KemaAlexArt/flowforge-infra.git
-    branch = main
+	path = shared-infrastructure
+	url = https://github.com/Win-KemaAlexArt/flowforge-infra.git
+	branch = main
