@@ -1,0 +1,68 @@
+name: Task Sync Validation
+
+on:
+  pull_request:
+    paths:
+      - 'tasks/**/*.md'
+      - 'MASTER-ROADMAP.md'
+      - 'scripts/task-manager.py'
+  push:
+    branches:
+      - main
+      - playragna-umbrella
+    paths:
+      - 'tasks/**/*.md'
+      - 'MASTER-ROADMAP.md'
+
+jobs:
+  validate-task-sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Validate Task Dependencies
+        run: python scripts/task-manager.py validate
+        
+      - name: Check Roadmap Sync
+        run: |
+          python scripts/task-manager.py scan
+          
+          # Check if roadmap was modified
+          if git diff --exit-code MASTER-ROADMAP.md; then
+            echo "✅ Roadmap is in sync with tasks"
+          else
+            echo "❌ Roadmap out of sync - task-manager.py made updates"
+            echo "Please run 'python scripts/task-manager.py scan' and commit changes"
+            git diff MASTER-ROADMAP.md
+            exit 1
+          fi
+      
+      - name: Generate Status Report
+        if: always()
+        run: python scripts/task-manager.py report
+      
+      - name: Comment PR with Status
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const { execSync } = require('child_process');
+            
+            // Generate report
+            const report = execSync('python scripts/task-manager.py report').toString();
+            
+            // Post comment
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 📊 Task Status Report\n\n\`\`\`\n${report}\n\`\`\``
+            });
