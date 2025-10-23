@@ -1,7 +1,7 @@
 [submodule "PlayRAGNA"]
 	path = PlayRAGNA
 	url = https://github.com/Win-KemaAlexArt/PlayRAGNA.git
-	branch = main
+	branch = brainstorm-playragna
 
 [submodule "workflow-engine"]
 	path = workflow-engine
